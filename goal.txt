@@ -1,0 +1,13 @@
+UI
+The UI has these features:
+- A dashboard of the items, tea, to choose from. 
+- I can specify the name, type, and a picture of the tea.
+- Each tea also allows me to enter a list of time in seconds to steep the tea.
+- After I save the information and steep times of the tea, I can view when in the dashboard. 
+- I can click on each of the steep time of the tea to start a countdown timer.
+- The countdown timer should be visible in the dashboard no matter where I'm navigating on the dashboard.
+Create the UI using react and TypeScript.
+
+Backend
+Store all of the tea information in a yaml file. 
+Do no create a database.

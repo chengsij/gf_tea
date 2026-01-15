@@ -36,7 +36,7 @@ app.get('/api/teas', (req, res) => {
   try {
     const teas = readTeas();
     res.json(teas);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to read teas' });
   }
 });
@@ -48,7 +48,7 @@ app.post('/api/teas', (req, res) => {
     teas.push(newTea);
     writeTeas(teas);
     res.status(201).json(newTea);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to save tea' });
   }
 });
@@ -59,7 +59,7 @@ app.delete('/api/teas/:id', (req, res) => {
     const filteredTeas = teas.filter(t => t.id !== req.params.id);
     writeTeas(filteredTeas);
     res.status(204).send();
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to delete tea' });
   }
 });

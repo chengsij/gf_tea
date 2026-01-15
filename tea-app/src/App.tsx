@@ -3,7 +3,7 @@ import './App.css'
 import type { Tea } from './types'
 import { getTeas, createTea, deleteTea } from './api'
 import { TimerProvider, useTimer } from './TimerContext'
-import { Clock, Trash2, Plus } from 'lucide-react'
+import { Clock, Trash2 } from 'lucide-react'
 
 const TimerOverlay = () => {
   const { timeLeft, activeTeaName, stopTimer } = useTimer();

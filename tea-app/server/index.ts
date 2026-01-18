@@ -29,7 +29,9 @@ const TeaSchema = z.object({
   steepTimes: z.array(z.number()),
   caffeine: z.string(),
   caffeineLevel: CaffeineLevelSchema,
-  website: z.string()
+  website: z.string(),
+  brewingTemperature: z.string(),
+  teaWeight: z.string()
 });
 
 type Tea = z.infer<typeof TeaSchema>;
@@ -251,7 +253,43 @@ app.post('/api/teas/import', async (req, res) => {
       // Sort by value
       steepTimes.sort((a, b) => a - b);
 
-      // 5. Caffeine Content
+      // 5. Brewing Temperature and Tea Weight (for Chinese Gongfu Method)
+      let brewingTemperature = '';
+      let teaWeight = '';
+
+      if (brewingTable) {
+        const tds = brewingTable.querySelectorAll('td');
+
+        // Find the index of "Chinese Gongfu Method" to determine column offset
+        let gongfuColumnOffset = -1;
+        for (let i = 0; i < tds.length; i++) {
+          if (tds[i].innerText.toLowerCase().includes('chinese gongfu')) {
+            gongfuColumnOffset = i % 2; // 0 for first column, 1 for second column
+            break;
+          }
+        }
+
+        // If gongfu method found in second column (offset 1), extract its temperature and weight
+        if (gongfuColumnOffset === 1) {
+          // Temperature is typically 2 rows after method header (in the temperature row)
+          // Weight is 1 row after temperature (in the weight row)
+          for (let i = 0; i < tds.length; i++) {
+            const tdText = tds[i].innerText.trim();
+
+            // Look for temperature patterns (with both Fahrenheit and Celsius)
+            if (i % 2 === gongfuColumnOffset && tdText.match(/\d+\s*℉\s*\/\s*\d+\s*℃/)) {
+              brewingTemperature = tdText;
+            }
+
+            // Look for tea weight patterns in gongfu column
+            if (i % 2 === gongfuColumnOffset && tdText.match(/\d+\s*g\s*(?:tea)?/i)) {
+              teaWeight = tdText;
+            }
+          }
+        }
+      }
+
+      // 6. Caffeine Content
       let caffeine = '';
 
       // Search full page text for caffeine information
@@ -312,9 +350,9 @@ app.post('/api/teas/import', async (req, res) => {
         return 'Low';
       })();
 
-      return { name, type, image, steepTimes, caffeine, caffeineLevel, website: window.location.href };
+      return { name, type, image, steepTimes, caffeine, caffeineLevel, website: window.location.href, brewingTemperature, teaWeight };
       } catch (e) {
-        return { name: 'Error', type: '', image: '', steepTimes: [], caffeine: String(e), caffeineLevel: 'Low', website: window.location.href };
+        return { name: 'Error', type: '', image: '', steepTimes: [], caffeine: String(e), caffeineLevel: 'Low', website: window.location.href, brewingTemperature: '', teaWeight: '' };
       }
     });
 

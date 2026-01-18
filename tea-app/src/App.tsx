@@ -102,6 +102,8 @@ const TeaForm = ({ onTeaAdded, onClose }: { onTeaAdded: () => void, onClose: () 
   const [caffeine, setCaffeine] = useState('');
   const [caffeineLevel, setCaffeineLevel] = useState<'Low' | 'Medium' | 'High'>('Low');
   const [website, setWebsite] = useState('');
+  const [brewingTemperature, setBrewingTemperature] = useState('');
+  const [teaWeight, setTeaWeight] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
@@ -115,7 +117,9 @@ const TeaForm = ({ onTeaAdded, onClose }: { onTeaAdded: () => void, onClose: () 
       steepTimes: times,
       caffeine,
       caffeineLevel,
-      website
+      website,
+      brewingTemperature,
+      teaWeight
     });
     onTeaAdded();
     onClose();
@@ -133,6 +137,8 @@ const TeaForm = ({ onTeaAdded, onClose }: { onTeaAdded: () => void, onClose: () 
       setCaffeine(data.caffeine || '');
       setCaffeineLevel(data.caffeineLevel as 'Low' | 'Medium' | 'High');
       setWebsite(data.website || '');
+      setBrewingTemperature(data.brewingTemperature);
+      setTeaWeight(data.teaWeight);
       setImportUrl('');
     } catch (error) {
       alert('Failed to import tea data.');
@@ -204,6 +210,14 @@ const TeaForm = ({ onTeaAdded, onClose }: { onTeaAdded: () => void, onClose: () 
             <div className="form-group">
               <label>Website</label>
               <input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://example.com" required />
+            </div>
+            <div className="form-group">
+              <label>Brewing Temperature (Gongfu Method)</label>
+              <input value={brewingTemperature} onChange={e => setBrewingTemperature(e.target.value)} placeholder="e.g. 185℉ / 85℃" required />
+            </div>
+            <div className="form-group">
+              <label>Tea Weight (Gongfu Method)</label>
+              <input value={teaWeight} onChange={e => setTeaWeight(e.target.value)} placeholder="e.g. 5g Tea" required />
             </div>
             <button type="submit" className="btn-primary" style={{marginTop: '0.5rem', width: '100%'}}>Save Tea</button>
           </form>

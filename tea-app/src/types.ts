@@ -11,7 +11,9 @@ export const TeaSchema = z.object({
   steepTimes: z.array(z.number()),
   caffeine: z.string(),
   caffeineLevel: CaffeineLevelSchema,
-  website: z.string()
+  website: z.string(),
+  brewingTemperature: z.string(),
+  teaWeight: z.string()
 });
 
 export type Tea = z.infer<typeof TeaSchema>;

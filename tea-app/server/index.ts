@@ -11,22 +11,43 @@ const app = express();
 const port = 3001;
 
 const isDist = __dirname.endsWith('dist');
-const DATA_FILE = isDist 
-  ? path.join(__dirname, '..', 'teas.yaml') 
+const DATA_FILE = isDist
+  ? path.join(__dirname, '..', 'teas.yaml')
   : path.join(__dirname, 'teas.yaml');
 
 app.use(cors());
 app.use(express.json());
 
+const CaffeineLevelSchema = z.enum(['Low', 'Medium', 'High']);
+const TeaTypeSchema = z.enum(['Green', 'Black', 'PuEr', 'Yellow', 'White', 'Oolong']);
+
 const TeaSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.string(),
+  type: TeaTypeSchema,
   image: z.string(),
-  steepTimes: z.array(z.number())
+  steepTimes: z.array(z.number()),
+  caffeine: z.string(),
+  caffeineLevel: CaffeineLevelSchema,
+  website: z.string()
 });
 
 type Tea = z.infer<typeof TeaSchema>;
+
+// Normalize tea type to canonical form (handles variations like "pu-er", "Pu-Er", etc.)
+const normalizeTeaType = (type: string): string => {
+  const normalized = type.toLowerCase().trim();
+
+  if (normalized === 'green') return 'Green';
+  if (normalized === 'black') return 'Black';
+  if (normalized === 'puer' || normalized === 'pu-er' || normalized === 'pu-erh') return 'PuEr';
+  if (normalized === 'yellow') return 'Yellow';
+  if (normalized === 'white') return 'White';
+  if (normalized === 'oolong') return 'Oolong';
+
+  // Return as-is if not recognized (will fail validation with helpful error message)
+  return type;
+};
 
 const readTeas = (): Tea[] => {
   if (!fs.existsSync(DATA_FILE)) {
@@ -77,11 +98,13 @@ app.post('/api/teas/import', async (req, res) => {
     const browser = await getBrowser();
     page = await browser.newPage();
     
-    // Optimize: Block unnecessary resources
+    // Optimize: Block unnecessary resources (but allow scripts so page renders properly)
     await page.setRequestInterception(true);
     page.on('request', (req: HTTPRequest) => {
       const resourceType = req.resourceType();
-      if (['image', 'stylesheet', 'font', 'media', 'script', 'xhr', 'fetch'].includes(resourceType)) {
+      // Block images, stylesheets, fonts, media to speed up loading
+      // Allow scripts and xhr so dynamic content can load
+      if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
         req.abort();
       } else {
         req.continue();
@@ -89,15 +112,40 @@ app.post('/api/teas/import', async (req, res) => {
     });
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    
+
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 8000 });
     } catch (e) {
       console.log('Navigation timeout or error, proceeding to scrape...');
     }
 
+    // Give extra time for dynamic content to render
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const data = await page.evaluate(() => {
-      // 1. Name
+      try {
+        // Remove customer reviews section from all processing
+        let bodyText = document.body.innerText;
+
+        // Find where reviews section starts and truncate there
+        const reviewPatterns = [
+          /customers?\s+who\s+viewed/i,
+          /customer\s+reviews?/i,
+          /related\s+products?/i,
+          /you\s+may\s+also\s+like/i,
+          /recently\s+viewed/i
+        ];
+
+        let cutoffIndex = bodyText.length;
+        for (const pattern of reviewPatterns) {
+          const match = bodyText.search(pattern);
+          if (match !== -1 && match < cutoffIndex) {
+            cutoffIndex = match;
+          }
+        }
+        bodyText = bodyText.substring(0, cutoffIndex);
+
+        // 1. Name
       const name = document.querySelector('h1.page-title')?.textContent?.trim() || document.querySelector('h1')?.textContent?.trim() || '';
 
       // 2. Image
@@ -110,50 +158,181 @@ app.post('/api/teas/import', async (req, res) => {
       // 3. Type
       let type = '';
       const validTypes = ['Green', 'Black', 'PuEr', 'Yellow', 'White', 'Oolong'];
-      
+
       const infoTitles = document.querySelectorAll('.info-title');
       infoTitles.forEach(el => {
           if (el.textContent?.includes('Categories')) {
               const containerText = el.parentElement?.textContent || '';
+              // Check for standard type names
               validTypes.forEach(t => {
                   if (containerText.includes(t)) {
                       type = t;
                   }
               });
+              // Check for pu-er variant if not found
+              if (!type && (containerText.includes('pu-er') || containerText.includes('Pu-Er') || containerText.includes('Pu-er'))) {
+                  type = 'PuEr';
+              }
           }
       });
-      
+
       if (!type) {
-           const bodyText = document.body.innerText;
            for (const t of validTypes) {
                if (bodyText.includes(t) && name.includes(t)) {
                    type = t;
                    break;
                }
            }
+           // Check for pu-er variant if not found
+           if (!type && (bodyText.includes('pu-er') || bodyText.includes('Pu-Er')) && name.includes('pu')) {
+               type = 'PuEr';
+           }
       }
 
       // 4. Steep Times
       const steepTimes: number[] = [];
-      const bodyText = document.body.innerText;
-      // Look for patterns like "10s"
-      // We can try to be more specific or just grab all numbers followed by 's'
-      const matches = bodyText.match(/(\d+)s/g);
-      if (matches && matches.length > 2) {
-          matches.forEach(m => {
-              const num = parseInt(m.replace('s', ''));
-              if (!isNaN(num) && num < 600) { // sanity check
-                  steepTimes.push(num);
-              }
-          });
+
+      // Find the "Recommend Brewing Method" title div and get the table after it
+      const titleDivs = document.querySelectorAll('.product-description-title');
+      let brewingTable: Element | null = null;
+
+      for (const div of titleDivs) {
+        if (div.textContent?.includes('Recommend') && div.textContent?.includes('Brew')) {
+          // Find the table that follows this div
+          let sibling = div.nextElementSibling;
+          while (sibling) {
+            if (sibling.tagName === 'TABLE') {
+              brewingTable = sibling;
+              break;
+            }
+            sibling = sibling.nextElementSibling;
+          }
+          break;
+        }
       }
 
-      return { name, type, image, steepTimes };
+      if (brewingTable) {
+        // Find the TD element that contains "steeps" keyword
+        const tds = brewingTable.querySelectorAll('td');
+
+        for (const td of tds) {
+          const tdText = td.innerText;
+
+          // Only process TDs that contain "steeps"
+          if (tdText.toLowerCase().includes('steeps')) {
+            // Find the colon after "steeps"
+            const colonIndex = tdText.toLowerCase().indexOf('steeps:');
+            if (colonIndex !== -1) {
+              const afterColon = tdText.substring(colonIndex + 7);
+
+              // Extract only the number sequence part, skipping "rinse" and other words
+              // Take only the first line after "steeps:", trim it, and remove leading words
+              const firstLine = afterColon.split('\n')[0].trim();
+              // Remove leading words like "rinse" followed by comma
+              const numberSequence = firstLine.replace(/^[a-z]+\s*,\s*/i, '');
+
+              // Extract numbers followed by 's' directly
+              const matches = numberSequence.match(/(\d+)\s*s/gi);
+
+              if (matches) {
+                matches.forEach(m => {
+                  const num = parseInt(m.match(/\d+/)![0]);
+                  if (!isNaN(num) && num >= 3 && num <= 999) {
+                    steepTimes.push(num);
+                  }
+                });
+              }
+            }
+            break; // Only process the first TD with "steeps"
+          }
+        }
+      }
+
+      // Sort by value
+      steepTimes.sort((a, b) => a - b);
+
+      // 5. Caffeine Content
+      let caffeine = '';
+
+      // Search full page text for caffeine information
+      const caffeinePatterns = [
+        // Pattern 1: "Low/Medium/High caffeine" with optional description in parentheses
+        /((?:low|medium|high|very low|very high)\s+caffeine[^.\n]*(?:\([^)]*\))?)/i,
+        // Pattern 2: "Caffeine:" or "Caffeine content:" followed by descriptive text
+        /caffeine(?:\s+content)?[:\s]*([^\n]*?(?:low|medium|high|less|more|very|\d+\s*mg|about|approx)(?:[^\n]*?)?)(?=\n|$|[.!?])/i,
+        // Pattern 3: mg-based patterns
+        /(\d+\s*-?\s*\d*\s*mg.*?caffeine|caffeine[:\s]*\d+\s*-?\s*\d*\s*mg)/i,
+        // Pattern 4: Just look for any line containing caffeine
+        /caffeine[^.\n]*/i
+      ];
+
+      for (const pattern of caffeinePatterns) {
+          const match = bodyText.match(pattern);
+          if (match) {
+              let found = match[0] || match[1] || '';
+              // Clean up the text
+              found = found.replace(/\s+/g, ' ').trim();
+              // Remove leading "caffeine" word if present to avoid duplication
+              found = found.replace(/^caffeine\s+/i, '').trim();
+              // Limit length
+              if (found.length > 0 && found.length < 200) {
+                  caffeine = found;
+                  break;
+              }
+          }
+      }
+
+      const caffeineLevel = (() => {
+        const text = caffeine.toLowerCase();
+
+        // Check for "less than X%" pattern first (treat upper bound as the threshold)
+        const lessMatch = text.match(/less\s+than\s+(\d+)\s*%/);
+        if (lessMatch) {
+          const percentage = parseInt(lessMatch[1]);
+          if (percentage <= 10) return 'Low';
+          if (percentage <= 25) return 'Medium';
+          return 'High';
+        }
+
+        // Check for "about X%" or plain "X%" pattern
+        const percentMatch = text.match(/about\s+(\d+)\s*%|(\d+)\s*%/);
+        if (percentMatch) {
+          const percentage = parseInt(percentMatch[1] || percentMatch[2]);
+          if (percentage < 10) return 'Low';
+          if (percentage < 25) return 'Medium';
+          return 'High';
+        }
+
+        // Fallback to keyword matching
+        if (text.includes('high')) return 'High';
+        if (text.includes('low')) return 'Low';
+        if (text.includes('medium') || text.includes('moderate')) return 'Medium';
+
+        // Default to Low if no clear indicator
+        return 'Low';
+      })();
+
+      return { name, type, image, steepTimes, caffeine, caffeineLevel, website: window.location.href };
+      } catch (e) {
+        return { name: 'Error', type: '', image: '', steepTimes: [], caffeine: String(e), caffeineLevel: 'Low', website: window.location.href };
+      }
     });
 
     await page.close(); // Only close the page, not the browser
 
-    res.json(data);
+    // Log debug info
+    if ('debug' in data && data.debug) {
+      console.log('DEBUG STEEP TIMES:');
+      (data.debug as string[]).forEach((line: string) => console.log('  ', line));
+    }
+
+    // Normalize tea type to canonical form before sending to frontend
+    const normalizedResponse = {
+      ...data,
+      type: normalizeTeaType(data.type)
+    };
+
+    res.json(normalizedResponse);
 
   } catch (error: any) {
     if (page) await page.close();
@@ -174,9 +353,16 @@ app.get('/api/teas', (req, res) => {
 app.post('/api/teas', (req, res) => {
   try {
     const teas = readTeas();
+
+    // Normalize tea type before validation
+    const normalizedData = {
+      ...req.body,
+      type: normalizeTeaType(req.body.type)
+    };
+
     // Validate request body
-    const newTeaData = TeaSchema.omit({ id: true }).parse(req.body);
-    
+    const newTeaData = TeaSchema.omit({ id: true }).parse(normalizedData);
+
     const newTea: Tea = { ...newTeaData, id: Date.now().toString() };
     teas.push(newTea);
     writeTeas(teas);

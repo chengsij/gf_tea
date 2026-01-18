@@ -61,6 +61,18 @@ const SidePanel = ({
               {tea.caffeineLevel}
             </span>
           </div>
+          {tea.brewingTemperature && (
+            <div className="info-row">
+              <span className="info-label">Brewing Temp:</span>
+              <span>{tea.brewingTemperature}</span>
+            </div>
+          )}
+          {tea.teaWeight && (
+            <div className="info-row">
+              <span className="info-label">Tea Weight:</span>
+              <span>{tea.teaWeight}</span>
+            </div>
+          )}
           {tea.website && (
             <div className="info-row">
               <a href={tea.website} target="_blank" rel="noopener noreferrer" className="website-link">
@@ -446,6 +458,10 @@ const TeaDashboard = () => {
                         <div className="tea-meta">
                           <span className="tea-type">{tea.type}</span>
                           {tea.caffeineLevel && <span className={`tea-caffeine ${tea.caffeineLevel.toLowerCase()}`}>{tea.caffeineLevel} Caffeine</span>}
+                        </div>
+                        <div className="tea-brewing-info">
+                          {tea.brewingTemperature && <span className="brewing-temp">{tea.brewingTemperature}</span>}
+                          {tea.teaWeight && <span className="tea-weight">{tea.teaWeight}</span>}
                         </div>
                       </div>
                     </div>

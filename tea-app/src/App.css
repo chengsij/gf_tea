@@ -311,6 +311,24 @@
   background: #fee2e2;
 }
 
+.tea-brewing-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.brewing-temp,
+.tea-weight {
+  padding: 0.25rem 0.5rem;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
 /* Steep Times */
 .steep-times-section {
   display: flex;
@@ -460,6 +478,8 @@
   font-weight: 500;
   font-size: 0.875rem;
   color: var(--color-text);
+  text-decoration: none;
+  font-style: normal;
 }
 
 .input-group {
@@ -630,8 +650,11 @@ select:hover {
 
 .info-label {
   font-weight: 600;
+  font-size: 0.9rem;
   color: var(--color-text-muted);
-  min-width: 80px;
+  min-width: 115px;
+  display: inline-block;
+  text-decoration: none;
 }
 
 .website-link {

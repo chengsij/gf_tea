@@ -108,7 +108,7 @@
   website: https://www.teavivre.com/yunnan-wild-black-tea.html
   brewingTemperature: ''
   teaWeight: ''
-- id: '1768772943132'
+- id: '1768774387624'
   name: Jasmine Dragon Pearls Long Zhu Green Tea
   type: Green
   image: >-
@@ -125,20 +125,3 @@
   website: https://www.teavivre.com/jasmine-long-zhu-green-tea.html
   brewingTemperature: 185℉ /85℃
   teaWeight: 5g Tea
-- name: Jasmine Dragon Pearls Long Zhu Green Tea
-  type: Green
-  image: >-
-    https://d27pcll2dx97vv.cloudfront.net/pub/media/catalog/product/cache/0f831c1845fc143d00d6d1ebc49f446a/j/a/jasmine_longzhu_01_1.jpg
-  steepTimes:
-    - 40
-    - 50
-    - 60
-    - 80
-    - 100
-    - 120
-  caffeine: Low caffeine (less than 10% of a cup of coffee)
-  caffeineLevel: Low
-  website: https://www.teavivre.com/jasmine-long-zhu-green-tea.html
-  brewingTemperature: 185℉ /85℃
-  teaWeight: 5g Tea
-  id: '1768774216740'

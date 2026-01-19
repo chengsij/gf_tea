@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Tea Timer App** - A full-stack React + Express application for managing a tea collection and tracking steep times with audio-notified countdown timers. The app stores tea data in a YAML file (no database) and includes URL scraping capabilities for importing tea information.
 
+## Claude Orchestration Mode
+
+**IMPORTANT**: Claude Code should operate in orchestration mode:
+- **Current model (orchestrator)**: Acts as orchestrator for planning, decision-making, coordination, and high-level architecture
+- **Haiku subagents**: Always used for code implementation, file operations, bash commands, and routine development tasks
+- Always indicate which model performed each task using prefixes like `[Model Name - Orchestrator]` or `[Haiku Agent]`
+
 ## Development Commands
 
 All commands should be run from `/tea-app` directory.

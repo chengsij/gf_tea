@@ -15,8 +15,8 @@
   caffeine: Low caffeine (less than 10% of a cup of coffee)
   caffeineLevel: Low
   website: https://www.teavivre.com/yu-luo-jasmine-green-tea.html
-  brewingTemperature: ''
-  teaWeight: ''
+  brewingTemperature: '185℉ / 85℃'
+  teaWeight: '5g Tea'
 - id: '1768672931895'
   name: Award Winning Huo Shan Huang Ya Yellow Tea
   type: Yellow
@@ -31,8 +31,8 @@
   caffeine: Low caffeine (less than 10% of a cup of coffee)
   caffeineLevel: Low
   website: https://www.teavivre.com/huo-shan-huang-ya-yellow-tea.html
-  brewingTemperature: ''
-  teaWeight: ''
+  brewingTemperature: '185℉ / 85℃'
+  teaWeight: '4g Tea'
 - id: '1768673001286'
   name: Taiwan Dong Ding (Tung Ting) Oolong Tea
   type: Oolong
@@ -49,8 +49,8 @@
   caffeine: 'Caffeine: Moderate caffeine (less than 20% of a cup of coffee)'
   caffeineLevel: Medium
   website: https://www.teavivre.com/dong-ding-oolong-tea.html
-  brewingTemperature: ''
-  teaWeight: ''
+  brewingTemperature: '212℉ / 100℃'
+  teaWeight: '7g Tea'
 - id: '1768673250777'
   name: Jasmine Raw Pu-erh Mini Tuocha
   type: PuEr
@@ -66,7 +66,7 @@
   caffeine: low caffeine (less than 10% of a cup of coffee)
   caffeineLevel: Low
   website: https://www.teavivre.com/jasmine-mini-raw-tuocha.html
-  brewingTemperature: ''
+  brewingTemperature: '203℉ / 95℃'
   teaWeight: ''
 - id: '1768772920509'
   name: Nonpareil Yunnan Dian Hong Ancient Wild Tree Black Tea
@@ -84,8 +84,8 @@
   caffeine: 'Caffeine: Less than 40% of a cup of coffee'
   caffeineLevel: High
   website: https://www.teavivre.com/yunnan-wild-black-tea.html
-  brewingTemperature: ''
-  teaWeight: ''
+  brewingTemperature: '194℉ / 90℃'
+  teaWeight: '5g Tea'
 - id: '1768774387624'
   name: Jasmine Dragon Pearls Long Zhu Green Tea
   type: Green

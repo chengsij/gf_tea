@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import './App.css'
 import type { Tea, CaffeineLevel, TeaType } from './types'
-import { getTeas, createTea, deleteTea, importTeaFromUrl } from './api'
+import { getTeas, createTea, deleteTea, importTeaFromUrl, updateTea } from './api'
 import { TimerProvider, useTimer } from './TimerContext'
-import { Clock, Plus, X, Coffee, ExternalLink } from 'lucide-react'
+import { Clock, Plus, X, Coffee, ExternalLink, Star } from 'lucide-react'
 import { CAFFEINE_LEVELS, TEA_TYPES } from './types'
 import { Toaster } from 'sonner'
 import { showSuccess, showError, showInfo } from './utils/toast'
@@ -34,14 +34,33 @@ const SidePanel = ({
   onClose,
   usedSteepTimes,
   onSteepTimeClick,
-  onResetUsed
+  onResetUsed,
+  onTeaUpdated
 }: {
   tea: Tea;
   onClose: () => void;
   usedSteepTimes: Set<number>;
   onSteepTimeClick: (idx: number, time: number, teaName: string) => void;
   onResetUsed: () => void;
+  onTeaUpdated: () => void;
 }) => {
+  const [isUpdatingRating, setIsUpdatingRating] = useState(false);
+
+  const handleRatingClick = async (rating: number | null) => {
+    setIsUpdatingRating(true);
+    try {
+      await updateTea(tea.id, { rating });
+      showSuccess(rating ? `Rating set to ${rating}/10` : 'Rating cleared');
+      onTeaUpdated();
+    } catch (error) {
+      console.error('Failed to update rating:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      showError(`Failed to update rating: ${errorMessage}`);
+    } finally {
+      setIsUpdatingRating(false);
+    }
+  };
+
   return (
     <div className="side-panel">
       <div className="side-panel-header">
@@ -83,6 +102,43 @@ const SidePanel = ({
                 <ExternalLink size={16} /> Visit Website
               </a>
             </div>
+          )}
+        </div>
+
+        <div className="rating-section">
+          <h3>Rating</h3>
+          <div className="stars-container">
+            <div className="stars">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(star => (
+                <button
+                  key={star}
+                  className="star-btn"
+                  onClick={() => handleRatingClick(star)}
+                  disabled={isUpdatingRating}
+                  title={`Rate ${star}/10`}
+                >
+                  <Star
+                    size={20}
+                    fill={star <= (tea.rating || 0) ? 'currentColor' : 'none'}
+                    className={star <= (tea.rating || 0) ? 'star-filled' : 'star-empty'}
+                  />
+                </button>
+              ))}
+            </div>
+            {tea.rating && (
+              <span className="rating-text">
+                {tea.rating}/10
+              </span>
+            )}
+          </div>
+          {tea.rating && (
+            <button
+              className="btn-clear-rating"
+              onClick={() => handleRatingClick(null)}
+              disabled={isUpdatingRating}
+            >
+              Clear Rating
+            </button>
           )}
         </div>
 
@@ -464,6 +520,7 @@ const TeaDashboard = () => {
                 return newMap;
               });
             }}
+            onTeaUpdated={fetchTeas}
           />
         )}
       </div>

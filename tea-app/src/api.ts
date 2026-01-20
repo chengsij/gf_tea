@@ -24,3 +24,15 @@ export const importTeaFromUrl = async (url: string): Promise<CreateTea> => {
 export const deleteTea = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/teas/${id}`);
 };
+
+export const updateTea = async (id: string, updates: Partial<Tea>): Promise<Tea> => {
+  const url = `${API_URL}/teas/${id}`;
+  console.log('[DEBUG] updateTea called');
+  console.log(`  URL: ${url}`);
+  console.log(`  ID: ${id}`);
+  console.log(`  Updates: ${JSON.stringify(updates)}`);
+  const response = await axios.patch(url, updates);
+  console.log(`  Response status: ${response.status}`);
+  console.log(`  Response data: ${JSON.stringify(response.data)}`);
+  return TeaSchema.parse(response.data);
+};

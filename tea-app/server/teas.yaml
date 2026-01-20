@@ -17,6 +17,7 @@
   website: https://www.teavivre.com/yu-luo-jasmine-green-tea.html
   brewingTemperature: 185℉ / 85℃
   teaWeight: 5g Tea
+  rating: 7
 - id: '1768672931895'
   name: Award Winning Huo Shan Huang Ya Yellow Tea
   type: Yellow
@@ -68,6 +69,7 @@
   website: https://www.teavivre.com/jasmine-mini-raw-tuocha.html
   brewingTemperature: 203℉ / 95℃
   teaWeight: ''
+  rating: 6
 - id: '1768772920509'
   name: Nonpareil Yunnan Dian Hong Ancient Wild Tree Black Tea
   type: Black
@@ -125,7 +127,9 @@
     https://www.teavivre.com/menghai-golden-buds-palac-ripened-puerh-tea-2012.html
   brewingTemperature: 212℉ / 100℃
   teaWeight: 10g Tea
-- name: Da Wu Ye (Big Dark Leaf) Phoenix Dan Cong Oolong Tea
+  rating: 8
+- id: '1768841164469'
+  name: Da Wu Ye (Big Dark Leaf) Phoenix Dan Cong Oolong Tea
   type: Oolong
   image: >-
     https://d27pcll2dx97vv.cloudfront.net/pub/media/catalog/product/cache/0f831c1845fc143d00d6d1ebc49f446a/d/a/da_wu_ye_1_1.jpg
@@ -147,4 +151,4 @@
   website: https://www.teavivre.com/da-wu-ye-phoenix-dan-cong-oolong-tea.html
   brewingTemperature: 203℉ / 95℃
   teaWeight: 8g Tea
-  id: '1768841164469'
+  rating: 9

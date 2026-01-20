@@ -11,6 +11,8 @@ import { z } from 'zod';
 // Load environment variables
 dotenv.config();
 
+console.log('!!! INDEX.TS LOADED - PATCH SHOULD BE IN CORS !!!');
+
 // Import shared types and constants
 import { TeaSchema } from '../../shared/types';
 import type { Tea } from '../../shared/types';
@@ -29,10 +31,24 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => ori
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'DELETE'],
+  methods: ['GET', 'POST', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type']
 }));
 app.use(express.json());
+
+// Debug logging middleware - DETAILED
+app.use((req, res, next) => {
+  console.log('='.repeat(60));
+  console.log(`[DEBUG] Incoming request:`);
+  console.log(`  Method: ${req.method}`);
+  console.log(`  Path: ${req.path}`);
+  console.log(`  URL: ${req.url}`);
+  console.log(`  Original URL: ${req.originalUrl}`);
+  console.log(`  Params: ${JSON.stringify(req.params)}`);
+  console.log(`  Body: ${JSON.stringify(req.body)}`);
+  console.log('='.repeat(60));
+  next();
+});
 
 // Normalize tea type to canonical form (handles variations like "pu-er", "Pu-Er", etc.)
 // Helper function to check if a hostname is a private/local IP address
@@ -651,8 +667,140 @@ app.delete('/api/teas/:id', (req, res) => {
   }
 });
 
+// Simple PATCH test route
+app.patch('/api/test-patch', (req, res) => {
+  console.log('[DEBUG] TEST PATCH route hit!');
+  res.json({ message: 'PATCH works', body: req.body });
+});
+
+console.log('!!! REGISTERING PATCH ROUTE NOW !!!');
+console.log('[DEBUG] About to register: PATCH /api/teas/:id');
+app.patch('/api/teas/:id', (req, res) => {
+  console.log('!!! PATCH HANDLER CALLED !!!');
+  console.log(`[DEBUG PATCH] Tea ID from params: ${req.params.id}`);
+  console.log(`[DEBUG PATCH] Request body: ${JSON.stringify(req.body)}`);
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({ error: 'Tea ID is required' });
+      return;
+    }
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      res.status(400).json({ error: 'Request body is required with at least one field to update' });
+      return;
+    }
+
+    let teas;
+    try {
+      teas = readTeas();
+    } catch (readError) {
+      console.error('Failed to read teas before update:', readError);
+      res.status(500).json({ error: 'Failed to read tea collection', details: readError instanceof Error ? readError.message : 'Unknown error' });
+      return;
+    }
+
+    const teaIndex = teas.findIndex(t => t.id === id);
+    if (teaIndex === -1) {
+      console.warn(`Attempted to update non-existent tea with ID: ${id}`);
+      res.status(404).json({ error: 'Tea not found' });
+      return;
+    }
+
+    // Validate rating if provided
+    if ('rating' in req.body) {
+      const rating = req.body.rating;
+      if (rating !== null && rating !== undefined) {
+        if (typeof rating !== 'number') {
+          res.status(400).json({ error: 'Invalid rating value', details: 'Rating must be a number or null' });
+          return;
+        }
+        if (rating < 1 || rating > 10) {
+          res.status(400).json({ error: 'Invalid rating value', details: 'Rating must be between 1 and 10' });
+          return;
+        }
+      }
+    }
+
+    const existingTea = teas[teaIndex];
+    const updatedTea: Tea = {
+      ...existingTea,
+      ...req.body
+    };
+
+    // Validate the updated tea against schema
+    let validatedTea;
+    try {
+      validatedTea = TeaSchema.parse(updatedTea);
+    } catch (validationError) {
+      console.error('Updated tea data validation failed:', validationError);
+      if (validationError instanceof z.ZodError) {
+        res.status(400).json({ error: 'Invalid tea data', details: validationError.issues });
+      } else {
+        res.status(400).json({ error: 'Failed to validate tea data', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' });
+      }
+      return;
+    }
+
+    teas[teaIndex] = validatedTea;
+
+    try {
+      writeTeas(teas);
+      console.log(`Successfully updated tea: ${validatedTea.name} (ID: ${id})`);
+      res.status(200).json(validatedTea);
+    } catch (writeError) {
+      console.error('Failed to save updated tea:', writeError);
+      res.status(500).json({ error: 'Failed to save tea', details: writeError instanceof Error ? writeError.message : 'Unknown error' });
+    }
+  } catch (error) {
+    console.error('Unexpected error in PATCH /api/teas/:id:', error);
+    res.status(500).json({ error: 'An unexpected error occurred while updating tea', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// Catch-all route for debugging unmatched requests (Express 5 syntax)
+app.use('/api/{*splat}', (req, _res, next) => {
+  console.log('[DEBUG] !!! UNMATCHED ROUTE !!!');
+  console.log(`  Method: ${req.method}`);
+  console.log(`  Path: ${req.path}`);
+  console.log(`  URL: ${req.url}`);
+  console.log('  This request did NOT match any registered route.');
+  next();
+});
+
+// Helper function to list all registered routes
+const listRoutes = () => {
+  console.log('\n[DEBUG] === ALL REGISTERED ROUTES ===');
+  const routes: { method: string; path: string }[] = [];
+
+  // Get routes from Express app._router
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach((middleware: any) => {
+      if (middleware.route) {
+        // Routes registered directly on the app
+        const methods = Object.keys(middleware.route.methods)
+          .filter(method => middleware.route.methods[method])
+          .map(m => m.toUpperCase());
+        methods.forEach(method => {
+          routes.push({ method, path: middleware.route.path });
+        });
+      }
+    });
+  }
+
+  routes.forEach(r => {
+    console.log(`  ${r.method.padEnd(7)} ${r.path}`);
+  });
+  console.log('[DEBUG] === END ROUTES ===\n');
+};
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+
+  // List all registered routes for debugging
+  listRoutes();
+
   // Pre-load the browser
   getBrowser()
     .then(() => console.log('Browser instance pre-loaded'))

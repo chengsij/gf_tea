@@ -31,7 +31,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => ori
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'DELETE', 'PATCH', 'PUT'],
   allowedHeaders: ['Content-Type']
 }));
 app.use(express.json());
@@ -762,6 +762,68 @@ app.patch('/api/teas/:id', (req, res) => {
   } catch (error) {
     console.error('Unexpected error in PATCH /api/teas/:id:', error);
     res.status(500).json({ error: 'An unexpected error occurred while updating tea', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.put('/api/teas/:id/lastConsumed', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({ error: 'Tea ID is required' });
+      return;
+    }
+
+    let teas;
+    try {
+      teas = readTeas();
+    } catch (readError) {
+      console.error('Failed to read teas before updating consumption:', readError);
+      res.status(500).json({ error: 'Failed to read tea collection', details: readError instanceof Error ? readError.message : 'Unknown error' });
+      return;
+    }
+
+    const teaIndex = teas.findIndex(t => t.id === id);
+    if (teaIndex === -1) {
+      console.warn(`Attempted to mark non-existent tea as consumed with ID: ${id}`);
+      res.status(404).json({ error: 'Tea not found' });
+      return;
+    }
+
+    const existingTea = teas[teaIndex];
+    const updatedTea: Tea = {
+      ...existingTea,
+      timesConsumed: (existingTea.timesConsumed || 0) + 1,
+      lastConsumedDate: Date.now()
+    };
+
+    // Validate the updated tea against schema
+    let validatedTea;
+    try {
+      validatedTea = TeaSchema.parse(updatedTea);
+    } catch (validationError) {
+      console.error('Updated tea data validation failed:', validationError);
+      if (validationError instanceof z.ZodError) {
+        res.status(400).json({ error: 'Invalid tea data', details: validationError.issues });
+      } else {
+        res.status(400).json({ error: 'Failed to validate tea data', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' });
+      }
+      return;
+    }
+
+    teas[teaIndex] = validatedTea;
+
+    try {
+      writeTeas(teas);
+      console.log(`Successfully marked tea as consumed: ${validatedTea.name} (ID: ${id}), times consumed: ${validatedTea.timesConsumed}`);
+      res.status(200).json(validatedTea);
+    } catch (writeError) {
+      console.error('Failed to save tea after marking consumed:', writeError);
+      res.status(500).json({ error: 'Failed to save tea', details: writeError instanceof Error ? writeError.message : 'Unknown error' });
+    }
+  } catch (error) {
+    console.error('Unexpected error in PUT /api/teas/:id/lastConsumed:', error);
+    res.status(500).json({ error: 'An unexpected error occurred while updating tea consumption', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

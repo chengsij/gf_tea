@@ -1,5 +1,6 @@
 import type { Tea } from '../types'
 import { Trash2, ExternalLink } from 'lucide-react'
+import { formatLastConsumedDate } from '../utils/dateFormat'
 
 interface TeaCardProps {
   tea: Tea
@@ -59,6 +60,11 @@ export const TeaCard = ({
                   {tea.caffeineLevel} Caffeine
                 </span>
               )}
+            </div>
+            <div className="tea-stats">
+              <span className="stat-text">
+                Drunk {tea.timesConsumed || 0} times | Last: {formatLastConsumedDate(tea.lastConsumedDate || null)}
+              </span>
             </div>
             <div className="tea-brewing-info">
               {tea.brewingTemperature && (

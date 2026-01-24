@@ -390,7 +390,7 @@ const TeaDashboard = () => {
   };
 
   const handleSteepTimeClick = (timeIdx: number, teaId: string, time: number, teaName: string) => {
-    startTimer(time, teaName);
+    startTimer(time, teaName, timeIdx);
     setUsedSteepTimes(prev => {
       const newMap = new Map(prev);
       const usedSet = newMap.get(teaId) || new Set<number>();

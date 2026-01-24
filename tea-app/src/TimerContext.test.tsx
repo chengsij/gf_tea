@@ -44,8 +44,8 @@ const TestComponent = () => {
     <div>
       <div data-testid="time-left">{timeLeft ?? 'null'}</div>
       <div data-testid="active-tea">{activeTeaName ?? 'null'}</div>
-      <button onClick={() => startTimer(30, 'Green Tea')}>Start Timer</button>
-      <button onClick={() => startTimer(5, 'Black Tea')}>Start 5s Timer</button>
+      <button onClick={() => startTimer(30, 'Green Tea', 0)}>Start Timer</button>
+      <button onClick={() => startTimer(5, 'Black Tea', 1)}>Start 5s Timer</button>
       <button onClick={stopTimer}>Stop Timer</button>
     </div>
   );
@@ -323,7 +323,7 @@ describe('TimerContext', () => {
             <div data-testid="time">{timeLeft ?? 'null'}</div>
             <button
               data-testid="custom-start"
-              onClick={() => startTimer(45, 'Custom Tea')}
+              onClick={() => startTimer(45, 'Custom Tea', 0)}
             >
               Custom Start
             </button>

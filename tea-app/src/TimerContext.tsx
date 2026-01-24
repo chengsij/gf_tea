@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 interface TimerContextType {
   timeLeft: number | null;
   activeTeaName: string | null;
-  startTimer: (seconds: number, teaName: string) => void;
+  activeSteepIndex: number | null;
+  startTimer: (seconds: number, teaName: string, steepIndex: number) => void;
   stopTimer: () => void;
 }
 
@@ -113,6 +114,7 @@ const playNotificationSound = (type: 'chime' | 'start' | 'end') => {
 export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [activeTeaName, setActiveTeaName] = useState<string | null>(null);
+  const [activeSteepIndex, setActiveSteepIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (timeLeft === null) return;
@@ -121,6 +123,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       playNotificationSound('end');
       setActiveTeaName(null);
       setTimeLeft(null);
+      setActiveSteepIndex(null);
       return;
     }
 
@@ -135,19 +138,21 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [timeLeft]);
 
-  const startTimer = useCallback((seconds: number, teaName: string) => {
+  const startTimer = useCallback((seconds: number, teaName: string, steepIndex: number) => {
     playNotificationSound('chime');
     setTimeLeft(seconds);
     setActiveTeaName(teaName);
+    setActiveSteepIndex(steepIndex);
   }, []);
 
   const stopTimer = useCallback(() => {
     setTimeLeft(null);
     setActiveTeaName(null);
+    setActiveSteepIndex(null);
   }, []);
 
   return (
-    <TimerContext.Provider value={{ timeLeft, activeTeaName, startTimer, stopTimer }}>
+    <TimerContext.Provider value={{ timeLeft, activeTeaName, activeSteepIndex, startTimer, stopTimer }}>
       {children}
     </TimerContext.Provider>
   );

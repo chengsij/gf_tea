@@ -25,7 +25,9 @@ export const TeaSchema = z.object({
   website: z.string(),
   brewingTemperature: z.string(),
   teaWeight: z.string(),
-  rating: z.number().min(1).max(10).nullable().optional()
+  rating: z.number().min(1).max(10).nullable().optional(),
+  timesConsumed: z.number().int().min(0).default(0),
+  lastConsumedDate: z.number().nullable().default(null)
 });
 
 export type Tea = z.infer<typeof TeaSchema>;
@@ -41,7 +43,14 @@ export const CreateTeaSchema = z.object({
   website: z.string().optional().default(''),
   brewingTemperature: z.string().optional().default(''),
   teaWeight: z.string().optional().default(''),
-  rating: z.number().min(1).max(10).nullable().optional()
+  rating: z.number().min(1).max(10).nullable().optional(),
+  timesConsumed: z.number().int().min(0).optional().default(0),
+  lastConsumedDate: z.number().nullable().optional().default(null)
 });
 
-export type CreateTea = z.infer<typeof CreateTeaSchema>;
+// For stricter TypeScript compatibility with exactOptionalPropertyTypes
+// We define CreateTea to explicitly make these fields optional (with ?)
+export type CreateTea = Omit<z.infer<typeof CreateTeaSchema>, 'timesConsumed' | 'lastConsumedDate'> & {
+  timesConsumed?: number;
+  lastConsumedDate?: number | null;
+};

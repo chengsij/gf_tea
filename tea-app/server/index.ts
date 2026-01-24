@@ -14,7 +14,7 @@ dotenv.config();
 console.log('!!! INDEX.TS LOADED - PATCH SHOULD BE IN CORS !!!');
 
 // Import shared types and constants
-import { TeaSchema } from '../../shared/types';
+import { TeaSchema, CreateTeaSchema } from '../../shared/types';
 import type { Tea } from '../../shared/types';
 
 const app = express();
@@ -598,7 +598,13 @@ app.post('/api/teas', (req, res) => {
     // Validate request body
     let newTeaData;
     try {
-      newTeaData = TeaSchema.omit({ id: true }).parse(normalizedData);
+      const createTeaData = CreateTeaSchema.parse(normalizedData);
+      // Add required fields with their defaults
+      newTeaData = {
+        ...createTeaData,
+        timesConsumed: createTeaData.timesConsumed ?? 0,
+        lastConsumedDate: createTeaData.lastConsumedDate ?? null
+      };
     } catch (validationError) {
       console.error('Tea data validation failed:', validationError);
       if (validationError instanceof z.ZodError) {

@@ -3,9 +3,9 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { TimerProvider, useTimer } from './TimerContext';
 
 // Mock the Web Audio API to prevent actual sound playing
-const mockCreateOscillator = vi.fn(function () {
+const mockCreateOscillator = vi.fn(function (this: any) {
   return {
-    connect: vi.fn(function () { return this; }),
+    connect: vi.fn(function (this: any) { return this; }),
     frequency: { value: 0 },
     type: 'sine' as OscillatorType,
     start: vi.fn(),
@@ -13,9 +13,9 @@ const mockCreateOscillator = vi.fn(function () {
   };
 });
 
-const mockCreateGain = vi.fn(function () {
+const mockCreateGain = vi.fn(function (this: any) {
   return {
-    connect: vi.fn(function () { return this; }),
+    connect: vi.fn(function (this: any) { return this; }),
     gain: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
   };
 });

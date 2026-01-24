@@ -98,7 +98,7 @@ describe('FilterBar Component', () => {
     });
 
     it('should highlight "All Types" when no type is selected', () => {
-      const { container } = render(
+      render(
         <FilterBar {...defaultProps} selectedType={null} />
       );
 
@@ -107,7 +107,7 @@ describe('FilterBar Component', () => {
     });
 
     it('should highlight selected type button', () => {
-      const { container } = render(
+      render(
         <FilterBar {...defaultProps} selectedType="Oolong" />
       );
 
@@ -363,7 +363,7 @@ describe('FilterBar Component', () => {
       const user = userEvent.setup();
       const onTypeChange = vi.fn();
 
-      const { rerender } = render(
+      render(
         <FilterBar
           {...defaultProps}
           searchTerm="Jasmine"

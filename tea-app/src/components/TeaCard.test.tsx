@@ -22,6 +22,8 @@ const createMockTea = (overrides?: Partial<Tea>): Tea => ({
   website: 'https://example.com',
   brewingTemperature: '170°F',
   teaWeight: '2.5g',
+  timesConsumed: 0,
+  lastConsumedDate: null,
   ...overrides,
 });
 

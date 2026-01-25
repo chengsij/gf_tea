@@ -232,7 +232,7 @@ const getBrowser = async () => {
         '--disable-gpu',
         '--single-process'
       ],
-      timeout: 200000
+      timeout: 3000
     });
     browserInstance.on('disconnected', () => {
       logger.info('Puppeteer browser disconnected unexpectedly');
@@ -294,9 +294,7 @@ app.post('/api/teas/import', async (req, res) => {
       }
     });
 
-    await page.setUserAgent({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
     // Navigate to URL with error handling
     let navigationSuccess = false;

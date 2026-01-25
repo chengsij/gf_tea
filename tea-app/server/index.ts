@@ -299,7 +299,7 @@ app.post('/api/teas/import', async (req, res) => {
     // Navigate to URL with error handling
     let navigationSuccess = false;
     try {
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
       navigationSuccess = true;
       logger.debug(`Successfully navigated to ${url}`);
     } catch (navigationError) {

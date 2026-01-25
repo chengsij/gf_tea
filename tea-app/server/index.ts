@@ -299,7 +299,7 @@ app.post('/api/teas/import', async (req, res) => {
     // Navigate to URL with error handling
     let navigationSuccess = false;
     try {
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 8000 });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       navigationSuccess = true;
       logger.debug(`Successfully navigated to ${url}`);
     } catch (navigationError) {
@@ -310,8 +310,8 @@ app.post('/api/teas/import', async (req, res) => {
 
     if (!navigationSuccess) {
       try {
-        // If networkidle2 failed, try with a shorter timeout
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+        // If networkidle2 failed, try with a longer timeout
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
         logger.debug(`Succeeded with domcontentloaded for ${url}`);
       } catch (fallbackError) {
         logger.error(`Puppeteer scraping failed - ${url}: Failed to load page at all - ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);

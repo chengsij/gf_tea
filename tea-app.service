@@ -1,0 +1,23 @@
+[Unit]
+Description=Tea Timer App
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/gf_tea/tea-app
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+
+# Optional: Resource limits for Raspberry Pi
+MemoryMax=500M
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -869,7 +869,7 @@ app.put('/api/teas/:id/lastConsumed', (req, res) => {
 
 // Serve static files from React build (for production)
 if (process.env.NODE_ENV === 'production') {
-  const distPath = path.join(__dirname, '..', '..', 'dist');
+  const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
 
   // React Router - serve index.html for all non-API routes

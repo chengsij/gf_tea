@@ -7,7 +7,8 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/gf_tea/tea-app
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm start
+#ExecStart=/home/pi/.nvm/versions/node/v20.20.0/bin/npm start
+ExecStart=/bin/bash -c 'source /home/pi/.nvm/nvm.sh && /home/pi/.nvm/versions/node/v20.20.0/bin/npm start'                                              
 Restart=always
 RestartSec=10
 

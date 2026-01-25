@@ -225,7 +225,8 @@ const getBrowser = async () => {
     browserInstance = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 60000
     });
     browserInstance.on('disconnected', () => {
       logger.info('Puppeteer browser disconnected unexpectedly');

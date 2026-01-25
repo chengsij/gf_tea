@@ -8,15 +8,15 @@ import yaml from 'js-yaml';
 import puppeteer, { Browser, HTTPRequest } from 'puppeteer';
 import { z } from 'zod';
 
-// Load environment variables
-dotenv.config();
-
-logger.debug('Index.ts loaded and initializing Express server');
-
 // Import logger and shared types
 import logger from './logger';
 import { TeaSchema, CreateTeaSchema } from '../../shared/types';
 import type { Tea } from '../../shared/types';
+
+// Load environment variables
+dotenv.config();
+
+logger.debug('Index.ts loaded and initializing Express server');
 
 const app = express();
 const port = 3001;

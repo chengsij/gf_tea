@@ -11,7 +11,7 @@ import { z } from 'zod';
 // Load environment variables
 dotenv.config();
 
-console.log('!!! INDEX.TS LOADED - PATCH SHOULD BE IN CORS !!!');
+logger.debug('Index.ts loaded and initializing Express server');
 
 // Import logger and shared types
 import logger from './logger';
@@ -20,6 +20,12 @@ import type { Tea } from '../../shared/types';
 
 const app = express();
 const port = 3001;
+
+// Global uncaught exception handler
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception', error);
+  process.exit(1);
+});
 
 const isDist = __dirname.endsWith('dist');
 const DATA_FILE = isDist
@@ -57,7 +63,7 @@ app.use((req, res, next) => {
         logger.info(logMessage);
       }
     } catch (logError) {
-      console.error('Failed to write log entry:', logError);
+      logger.error('Failed to write log entry', logError instanceof Error ? logError : new Error(String(logError)));
     }
   };
 
@@ -69,15 +75,11 @@ app.use((req, res, next) => {
 
 // Debug logging middleware - DETAILED
 app.use((req, res, next) => {
-  console.log('='.repeat(60));
-  console.log(`[DEBUG] Incoming request:`);
-  console.log(`  Method: ${req.method}`);
-  console.log(`  Path: ${req.path}`);
-  console.log(`  URL: ${req.url}`);
-  console.log(`  Original URL: ${req.originalUrl}`);
-  console.log(`  Params: ${JSON.stringify(req.params)}`);
-  console.log(`  Body: ${JSON.stringify(req.body)}`);
-  console.log('='.repeat(60));
+  logger.debug(`Incoming request: ${req.method} ${req.path}`, {
+    originalUrl: req.originalUrl,
+    params: req.params,
+    body: req.body
+  });
   next();
 });
 
@@ -161,7 +163,7 @@ const normalizeTeaType = (type: string): string => {
 const readTeas = (): Tea[] => {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      console.log(`Data file not found at ${DATA_FILE}, returning empty collection`);
+      logger.debug(`Data file not found at ${DATA_FILE}, returning empty collection`);
       return [];
     }
 
@@ -171,9 +173,10 @@ const readTeas = (): Tea[] => {
     const data = yaml.load(fileContents);
     return z.array(TeaSchema).parse(data);
   } catch (error) {
-    console.error('Failed to read or parse teas.yaml:', error);
     if (error instanceof z.ZodError) {
-      console.error('Validation error details:', error.issues);
+      logger.error(`Failed to read teas.yaml - validation error in file format`, new Error(JSON.stringify(error.issues)));
+    } else {
+      logger.error(`Failed to read teas.yaml - ${error instanceof Error ? error.message : String(error)}`);
     }
     throw new Error('Failed to read tea collection from file');
   }
@@ -188,26 +191,28 @@ const writeTeas = (teas: Tea[]): boolean => {
     if (!fs.existsSync(dirPath)) {
       try {
         fs.mkdirSync(dirPath, { recursive: true });
-        console.log(`Created directory: ${dirPath}`);
+        logger.debug(`Created directory: ${dirPath}`);
       } catch (mkdirError) {
-        console.error(`Failed to create directory ${dirPath}:`, mkdirError);
+        logger.error(`Failed to write teas.yaml - Failed to create directory ${dirPath}: ${mkdirError instanceof Error ? mkdirError.message : String(mkdirError)}`);
         throw new Error('Failed to create data directory');
       }
     }
 
     // Attempt to write file
     fs.writeFileSync(DATA_FILE, yamlStr, 'utf8');
-    console.log(`Successfully saved ${teas.length} teas to ${DATA_FILE}`);
+    logger.debug(`Successfully saved ${teas.length} teas to ${DATA_FILE}`);
     return true;
   } catch (error) {
-    console.error('Failed to write teas.yaml:', error);
     if (error instanceof Error) {
       if (error.message.includes('EACCES')) {
+        logger.error('Failed to write teas.yaml - Permission denied: Unable to write to data file');
         throw new Error('Permission denied: Unable to write to data file');
       } else if (error.message.includes('ENOSPC')) {
+        logger.error('Failed to write teas.yaml - Disk full: Unable to save tea data');
         throw new Error('Disk full: Unable to save tea data');
       }
     }
+    logger.error(`Failed to write teas.yaml - ${error instanceof Error ? error.message : String(error)}`);
     throw new Error('Failed to save tea collection to file');
   }
 };
@@ -222,7 +227,7 @@ const getBrowser = async () => {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     browserInstance.on('disconnected', () => {
-      console.log('Browser disconnected');
+      logger.info('Puppeteer browser disconnected unexpectedly');
       browserInstance = null;
     });
   }
@@ -231,11 +236,12 @@ const getBrowser = async () => {
 
 app.post('/api/teas/import', async (req, res) => {
   const { url } = req.body;
+  const scrapingStartTime = Date.now();
 
   // Validate URL for SSRF attacks
   const urlValidation = validateURLForSSRF(url);
   if (!urlValidation.valid) {
-    console.error('SSRF validation failed:', urlValidation.error);
+    logger.warn(`Puppeteer scraping failed - ${url}: SSRF validation failed - ${urlValidation.error}`);
     res.status(400).json({ error: urlValidation.error });
     return;
   }
@@ -246,14 +252,14 @@ app.post('/api/teas/import', async (req, res) => {
     try {
       browser = await getBrowser();
     } catch (browserError) {
-      console.error('Failed to launch browser:', browserError);
+      logger.error(`Puppeteer scraping failed - ${url}: Failed to launch browser - ${browserError instanceof Error ? browserError.message : String(browserError)}`);
       res.status(500).json({ error: 'Failed to initialize browser. Please try again later.' });
       return;
     }
 
     // Check if browser is connected
     if (!browser || browser.process() === null) {
-      console.error('Browser instance is not connected');
+      logger.error(`Puppeteer scraping failed - ${url}: Browser instance is not connected`);
       browserInstance = null;
       res.status(500).json({ error: 'Browser connection lost. Please try again.' });
       return;
@@ -262,7 +268,7 @@ app.post('/api/teas/import', async (req, res) => {
     try {
       page = await browser.newPage();
     } catch (pageError) {
-      console.error('Failed to create new page:', pageError);
+      logger.error(`Puppeteer scraping failed - ${url}: Failed to create new page - ${pageError instanceof Error ? pageError.message : String(pageError)}`);
       res.status(500).json({ error: 'Failed to create browser page. Please try again.' });
       return;
     }
@@ -289,9 +295,9 @@ app.post('/api/teas/import', async (req, res) => {
     try {
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 8000 });
       navigationSuccess = true;
-      console.log(`Successfully navigated to ${url}`);
+      logger.debug(`Successfully navigated to ${url}`);
     } catch (navigationError) {
-      console.warn(`Navigation to ${url} timed out or failed, attempting to scrape available content:`, navigationError instanceof Error ? navigationError.message : navigationError);
+      logger.warn(`Puppeteer scraping failed - ${url}: Navigation timed out or failed, attempting to scrape available content - ${navigationError instanceof Error ? navigationError.message : String(navigationError)}`);
       // Continue anyway - some pages may be scrapeable even if they timeout
       navigationSuccess = false;
     }
@@ -300,9 +306,9 @@ app.post('/api/teas/import', async (req, res) => {
       try {
         // If networkidle2 failed, try with a shorter timeout
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
-        console.log(`Succeeded with domcontentloaded for ${url}`);
+        logger.debug(`Succeeded with domcontentloaded for ${url}`);
       } catch (fallbackError) {
-        console.error(`Failed to load page at all:`, fallbackError instanceof Error ? fallbackError.message : fallbackError);
+        logger.error(`Puppeteer scraping failed - ${url}: Failed to load page at all - ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
         await page.close();
         res.status(400).json({ error: 'Failed to load the URL. Please verify the URL is valid and accessible.' });
         return;
@@ -546,7 +552,7 @@ app.post('/api/teas/import', async (req, res) => {
       }
     });
     } catch (evaluateError) {
-      console.error('Failed to evaluate page content:', evaluateError);
+      logger.error(`Puppeteer scraping failed - ${url}: Failed to evaluate page content - ${evaluateError instanceof Error ? evaluateError.message : String(evaluateError)}`);
       await page.close();
       res.status(400).json({ error: 'Failed to extract tea information from the page. The website may not be supported.' });
       return;
@@ -555,7 +561,7 @@ app.post('/api/teas/import', async (req, res) => {
     // Check if scraping returned valid data
     if (!data || !data.name || data.name === 'Error') {
       await page.close();
-      console.warn('Scraping returned no valid data from', url);
+      logger.warn(`Puppeteer scraping failed - ${url}: Scraping returned no valid data`);
       res.status(400).json({ error: 'Could not extract tea information from the URL. Please try a different URL or enter the information manually.' });
       return;
     }
@@ -564,8 +570,7 @@ app.post('/api/teas/import', async (req, res) => {
 
     // Log debug info
     if ('debug' in data && data.debug) {
-      console.log('DEBUG STEEP TIMES:');
-      (data.debug as string[]).forEach((line: string) => console.log('  ', line));
+      logger.debug('Debug steep times extracted from page', { debugInfo: data.debug });
     }
 
     // Normalize tea type to canonical form before sending to frontend
@@ -574,7 +579,13 @@ app.post('/api/teas/import', async (req, res) => {
       type: normalizeTeaType(data.type)
     };
 
-    console.log(`Successfully scraped tea data from ${url}:`, normalizedResponse.name);
+    // Calculate scraping duration and check for slow scrapes
+    const scrapingDuration = Date.now() - scrapingStartTime;
+    if (scrapingDuration > 3000) {
+      logger.warn(`Slow Puppeteer scrape - ${scrapingDuration}ms for ${url}`);
+    } else {
+      logger.info(`Successfully scraped tea data from ${url}: ${normalizedResponse.name} (${scrapingDuration}ms)`);
+    }
     res.json(normalizedResponse);
 
   } catch (error: any) {
@@ -582,10 +593,10 @@ app.post('/api/teas/import', async (req, res) => {
       try {
         await page.close();
       } catch (closeError) {
-        console.error('Failed to close page:', closeError);
+        logger.error(`Puppeteer scraping failed - ${url}: Failed to close page - ${closeError instanceof Error ? closeError.message : String(closeError)}`);
       }
     }
-    console.error('Scraping error:', error);
+    logger.error(`Puppeteer scraping failed - ${url}: ${error instanceof Error ? error.message : String(error)}`);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during scraping';
     res.status(500).json({ error: 'Failed to scrape URL', details: errorMessage });
   }
@@ -594,10 +605,10 @@ app.post('/api/teas/import', async (req, res) => {
 app.get('/api/teas', (req, res) => {
   try {
     const teas = readTeas();
-    console.log(`Retrieved ${teas.length} teas from collection`);
+    logger.debug(`Retrieved ${teas.length} teas from collection`);
     res.json(teas);
   } catch (error) {
-    console.error('Failed to read teas:', error);
+    logger.error(`Failed to read teas.yaml - ${error instanceof Error ? error.message : String(error)}`);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     res.status(500).json({ error: 'Failed to read tea collection', details: errorMessage });
   }
@@ -615,7 +626,7 @@ app.post('/api/teas', (req, res) => {
     try {
       teas = readTeas();
     } catch (readError) {
-      console.error('Failed to read existing teas:', readError);
+      logger.error(`Failed to read teas.yaml - ${readError instanceof Error ? readError.message : String(readError)}`);
       res.status(500).json({ error: 'Failed to read existing tea collection', details: readError instanceof Error ? readError.message : 'Unknown error' });
       return;
     }
@@ -637,10 +648,11 @@ app.post('/api/teas', (req, res) => {
         lastConsumedDate: createTeaData.lastConsumedDate ?? null
       };
     } catch (validationError) {
-      console.error('Tea data validation failed:', validationError);
       if (validationError instanceof z.ZodError) {
+        logger.warn(`Tea validation failed - Tea data validation failed: ${JSON.stringify(validationError.issues)}`);
         res.status(400).json({ error: 'Invalid tea data', details: validationError.issues });
       } else {
+        logger.error(`Tea validation failed - ${validationError instanceof Error ? validationError.message : String(validationError)}`);
         res.status(400).json({ error: 'Failed to validate tea data', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' });
       }
       return;
@@ -651,15 +663,14 @@ app.post('/api/teas', (req, res) => {
 
     try {
       writeTeas(teas);
-      console.log(`Successfully created new tea: ${newTea.name} (ID: ${newTea.id})`);
       logger.info(`Tea created - id: ${newTea.id}, name: "${newTea.name}"`);
       res.status(201).json(newTea);
     } catch (writeError) {
-      console.error('Failed to save new tea:', writeError);
+      logger.error(`Failed to write teas.yaml - ${writeError instanceof Error ? writeError.message : String(writeError)}`);
       res.status(500).json({ error: 'Failed to save tea', details: writeError instanceof Error ? writeError.message : 'Unknown error' });
     }
   } catch (error) {
-    console.error('Unexpected error in POST /api/teas:', error);
+    logger.error(`Unexpected error in POST /api/teas: ${error instanceof Error ? error.message : String(error)}`);
     res.status(500).json({ error: 'An unexpected error occurred while saving tea', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -677,14 +688,13 @@ app.delete('/api/teas/:id', (req, res) => {
     try {
       teas = readTeas();
     } catch (readError) {
-      console.error('Failed to read teas before deletion:', readError);
+      logger.error(`Failed to read teas.yaml - ${readError instanceof Error ? readError.message : String(readError)}`);
       res.status(500).json({ error: 'Failed to read tea collection', details: readError instanceof Error ? readError.message : 'Unknown error' });
       return;
     }
 
     const teaToDelete = teas.find(t => t.id === teaId);
     if (!teaToDelete) {
-      console.warn(`Attempted to delete non-existent tea with ID: ${teaId}`);
       logger.warn(`Delete failed - tea not found: id ${teaId}`);
       res.status(404).json({ error: 'Tea not found' });
       return;
@@ -694,31 +704,25 @@ app.delete('/api/teas/:id', (req, res) => {
 
     try {
       writeTeas(filteredTeas);
-      console.log(`Successfully deleted tea: ${teaToDelete.name} (ID: ${teaId})`);
       logger.info(`Tea deleted - id: ${teaId}`);
       res.status(204).send();
     } catch (writeError) {
-      console.error('Failed to save teas after deletion:', writeError);
+      logger.error(`Failed to write teas.yaml - ${writeError instanceof Error ? writeError.message : String(writeError)}`);
       res.status(500).json({ error: 'Failed to delete tea', details: writeError instanceof Error ? writeError.message : 'Unknown error' });
     }
   } catch (error) {
-    console.error('Unexpected error in DELETE /api/teas/:id:', error);
+    logger.error(`Unexpected error in DELETE /api/teas/:id: ${error instanceof Error ? error.message : String(error)}`);
     res.status(500).json({ error: 'An unexpected error occurred while deleting tea', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
 // Simple PATCH test route
 app.patch('/api/test-patch', (req, res) => {
-  console.log('[DEBUG] TEST PATCH route hit!');
+  logger.debug('TEST PATCH route hit');
   res.json({ message: 'PATCH works', body: req.body });
 });
 
-console.log('!!! REGISTERING PATCH ROUTE NOW !!!');
-console.log('[DEBUG] About to register: PATCH /api/teas/:id');
 app.patch('/api/teas/:id', (req, res) => {
-  console.log('!!! PATCH HANDLER CALLED !!!');
-  console.log(`[DEBUG PATCH] Tea ID from params: ${req.params.id}`);
-  console.log(`[DEBUG PATCH] Request body: ${JSON.stringify(req.body)}`);
   try {
     const { id } = req.params;
 
@@ -736,14 +740,14 @@ app.patch('/api/teas/:id', (req, res) => {
     try {
       teas = readTeas();
     } catch (readError) {
-      console.error('Failed to read teas before update:', readError);
+      logger.error(`Failed to read teas.yaml - ${readError instanceof Error ? readError.message : String(readError)}`);
       res.status(500).json({ error: 'Failed to read tea collection', details: readError instanceof Error ? readError.message : 'Unknown error' });
       return;
     }
 
     const teaIndex = teas.findIndex(t => t.id === id);
     if (teaIndex === -1) {
-      console.warn(`Attempted to update non-existent tea with ID: ${id}`);
+      logger.warn(`Attempted to update non-existent tea with ID: ${id}`);
       res.status(404).json({ error: 'Tea not found' });
       return;
     }
@@ -774,10 +778,11 @@ app.patch('/api/teas/:id', (req, res) => {
     try {
       validatedTea = TeaSchema.parse(updatedTea);
     } catch (validationError) {
-      console.error('Updated tea data validation failed:', validationError);
       if (validationError instanceof z.ZodError) {
+        logger.warn(`Tea validation failed - id: ${id} - ${JSON.stringify(validationError.issues)}`);
         res.status(400).json({ error: 'Invalid tea data', details: validationError.issues });
       } else {
+        logger.error(`Tea validation failed - id: ${id} - ${validationError instanceof Error ? validationError.message : String(validationError)}`);
         res.status(400).json({ error: 'Failed to validate tea data', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' });
       }
       return;
@@ -787,14 +792,14 @@ app.patch('/api/teas/:id', (req, res) => {
 
     try {
       writeTeas(teas);
-      console.log(`Successfully updated tea: ${validatedTea.name} (ID: ${id})`);
+      logger.info(`Tea updated - id: ${id}, name: "${validatedTea.name}"`);
       res.status(200).json(validatedTea);
     } catch (writeError) {
-      console.error('Failed to save updated tea:', writeError);
+      logger.error(`Failed to write teas.yaml - ${writeError instanceof Error ? writeError.message : String(writeError)}`);
       res.status(500).json({ error: 'Failed to save tea', details: writeError instanceof Error ? writeError.message : 'Unknown error' });
     }
   } catch (error) {
-    console.error('Unexpected error in PATCH /api/teas/:id:', error);
+    logger.error(`Unexpected error in PATCH /api/teas/:id: ${error instanceof Error ? error.message : String(error)}`);
     res.status(500).json({ error: 'An unexpected error occurred while updating tea', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -812,14 +817,13 @@ app.put('/api/teas/:id/lastConsumed', (req, res) => {
     try {
       teas = readTeas();
     } catch (readError) {
-      console.error('Failed to read teas before updating consumption:', readError);
+      logger.error(`Failed to read teas.yaml - ${readError instanceof Error ? readError.message : String(readError)}`);
       res.status(500).json({ error: 'Failed to read tea collection', details: readError instanceof Error ? readError.message : 'Unknown error' });
       return;
     }
 
     const teaIndex = teas.findIndex(t => t.id === id);
     if (teaIndex === -1) {
-      console.warn(`Attempted to mark non-existent tea as consumed with ID: ${id}`);
       logger.warn(`Consumption failed - tea not found: id ${id}`);
       res.status(404).json({ error: 'Tea not found' });
       return;
@@ -837,10 +841,11 @@ app.put('/api/teas/:id/lastConsumed', (req, res) => {
     try {
       validatedTea = TeaSchema.parse(updatedTea);
     } catch (validationError) {
-      console.error('Updated tea data validation failed:', validationError);
       if (validationError instanceof z.ZodError) {
+        logger.warn(`Tea validation failed - id: ${id} - ${JSON.stringify(validationError.issues)}`);
         res.status(400).json({ error: 'Invalid tea data', details: validationError.issues });
       } else {
+        logger.error(`Tea validation failed - id: ${id} - ${validationError instanceof Error ? validationError.message : String(validationError)}`);
         res.status(400).json({ error: 'Failed to validate tea data', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' });
       }
       return;
@@ -850,15 +855,14 @@ app.put('/api/teas/:id/lastConsumed', (req, res) => {
 
     try {
       writeTeas(teas);
-      console.log(`Successfully marked tea as consumed: ${validatedTea.name} (ID: ${id}), times consumed: ${validatedTea.timesConsumed}`);
       logger.info(`Tea consumed - id: ${id} (count: ${validatedTea.timesConsumed})`);
       res.status(200).json(validatedTea);
     } catch (writeError) {
-      console.error('Failed to save tea after marking consumed:', writeError);
+      logger.error(`Failed to write teas.yaml - ${writeError instanceof Error ? writeError.message : String(writeError)}`);
       res.status(500).json({ error: 'Failed to save tea', details: writeError instanceof Error ? writeError.message : 'Unknown error' });
     }
   } catch (error) {
-    console.error('Unexpected error in PUT /api/teas/:id/lastConsumed:', error);
+    logger.error(`Unexpected error in PUT /api/teas/:id/lastConsumed: ${error instanceof Error ? error.message : String(error)}`);
     res.status(500).json({ error: 'An unexpected error occurred while updating tea consumption', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -888,7 +892,6 @@ if (process.env.NODE_ENV === 'production') {
 
 // Helper function to list all registered routes
 const listRoutes = () => {
-  console.log('\n[DEBUG] === ALL REGISTERED ROUTES ===');
   const routes: { method: string; path: string }[] = [];
 
   // Get routes from Express app._router
@@ -906,10 +909,7 @@ const listRoutes = () => {
     });
   }
 
-  routes.forEach(r => {
-    console.log(`  ${r.method.padEnd(7)} ${r.path}`);
-  });
-  console.log('[DEBUG] === END ROUTES ===\n');
+  logger.debug('Registered Express routes', { routes });
 };
 
 app.listen(port, '0.0.0.0', () => {

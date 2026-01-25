@@ -296,29 +296,15 @@ app.post('/api/teas/import', async (req, res) => {
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
-    // Navigate to URL with error handling
-    let navigationSuccess = false;
+    // Navigate to URL with error handling - use domcontentloaded for faster loading
     try {
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
-      navigationSuccess = true;
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
       logger.debug(`Successfully navigated to ${url}`);
     } catch (navigationError) {
-      logger.warn(`Puppeteer scraping failed - ${url}: Navigation timed out or failed, attempting to scrape available content - ${navigationError instanceof Error ? navigationError.message : String(navigationError)}`);
-      // Continue anyway - some pages may be scrapeable even if they timeout
-      navigationSuccess = false;
-    }
-
-    if (!navigationSuccess) {
-      try {
-        // If networkidle2 failed, try with a longer timeout
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-        logger.debug(`Succeeded with domcontentloaded for ${url}`);
-      } catch (fallbackError) {
-        logger.error(`Puppeteer scraping failed - ${url}: Failed to load page at all - ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
-        await page.close();
-        res.status(400).json({ error: 'Failed to load the URL. Please verify the URL is valid and accessible.' });
-        return;
-      }
+      logger.error(`Puppeteer scraping failed - ${url}: Failed to load page - ${navigationError instanceof Error ? navigationError.message : String(navigationError)}`);
+      await page.close();
+      res.status(400).json({ error: 'Failed to load the URL. Please verify the URL is valid and accessible.' });
+      return;
     }
 
     // Give extra time for dynamic content to render

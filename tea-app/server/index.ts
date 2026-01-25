@@ -232,7 +232,7 @@ const getBrowser = async () => {
         '--disable-gpu',
         '--single-process'
       ],
-      timeout: 60000
+      timeout: 200000
     });
     browserInstance.on('disconnected', () => {
       logger.info('Puppeteer browser disconnected unexpectedly');

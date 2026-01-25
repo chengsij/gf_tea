@@ -27,9 +27,9 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-const isDist = __dirname.endsWith('dist');
+const isDist = __dirname.includes('/dist/');
 const DATA_FILE = isDist
-  ? path.join(__dirname, '..', 'teas.yaml')
+  ? path.join(__dirname, '..', '..', '..', 'teas.yaml')
   : path.join(__dirname, 'teas.yaml');
 
 // Configure CORS with whitelisted origins
@@ -605,7 +605,7 @@ app.post('/api/teas/import', async (req, res) => {
 app.get('/api/teas', (req, res) => {
   try {
     const teas = readTeas();
-    logger.debug(`Retrieved ${teas.length} teas from collection`);
+    logger.info(`Retrieved ${teas.length} teas from collection`);
     res.json(teas);
   } catch (error) {
     logger.error(`Failed to read teas.yaml - ${error instanceof Error ? error.message : String(error)}`);

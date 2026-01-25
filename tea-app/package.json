@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "cd server && NODE_ENV=production node dist/tea-app/server/index.js",
+    "start": "NODE_ENV=production node server/dist/tea-app/server/index.js",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"

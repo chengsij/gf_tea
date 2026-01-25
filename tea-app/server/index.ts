@@ -5,7 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import yaml from 'js-yaml';
-import puppeteer, { Browser, HTTPRequest } from 'puppeteer';
+import puppeteer, { Browser, HTTPRequest } from 'puppeteer-core';
 import { z } from 'zod';
 
 // Import logger and shared types

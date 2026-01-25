@@ -225,7 +225,13 @@ const getBrowser = async () => {
     browserInstance = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process'
+      ],
       timeout: 60000
     });
     browserInstance.on('disconnected', () => {

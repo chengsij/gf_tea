@@ -121,6 +121,27 @@ POST   /api/teas/import       # Scrape tea data from URL
 
 All responses validated with Zod schemas.
 
+### Authentication
+
+The app uses JWT-based authentication for personal access control.
+
+**Environment Variables (server/.env):**
+```
+ADMIN_USERNAME=yourname
+ADMIN_PASSWORD_HASH=$2b$10$...  # Generate with: cd server && npx tsx scripts/hash-password.ts yourpassword
+JWT_SECRET=random-secret-string
+```
+
+**Auth Flow:**
+1. All `/api/*` routes (except `/api/auth/login`) require `Authorization: Bearer <token>` header
+2. Frontend stores JWT in localStorage, includes in all API requests
+3. Token expires after 30 days, user must re-login
+
+**New API Endpoint:**
+```
+POST /api/auth/login  # Accepts { username, password }, returns { token }
+```
+
 ## Critical Design Patterns
 
 1. **Global State (Context API)** - `TimerContext` provides `timeLeft`, `activeTeaName`, `startTimer()`, `stopTimer()` available anywhere via `useTimer()` hook

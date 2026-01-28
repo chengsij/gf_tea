@@ -548,6 +548,26 @@ app.post('/api/teas', (req, res) => {
   }
 });
 
+app.get('/api/teas/export', (req, res) => {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      logger.warn('Export failed - Data file not found');
+      res.status(404).json({ error: 'Tea data file not found' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'text/yaml');
+    res.setHeader('Content-Disposition', 'attachment; filename=teas.yaml');
+    
+    const fileStream = fs.createReadStream(DATA_FILE);
+    fileStream.pipe(res);
+    logger.info('Exported teas.yaml');
+  } catch (error) {
+    logger.error(`Export failed - ${error instanceof Error ? error.message : String(error)}`);
+    res.status(500).json({ error: 'Failed to export tea data' });
+  }
+});
+
 app.delete('/api/teas/:id', (req, res) => {
   try {
     const teaId = req.params.id;

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import './App.css'
 import type { Tea, CaffeineLevel, TeaType } from './types'
-import { getTeas, createTea, deleteTea, importTeaFromUrl, updateTea, markTeaConsumed } from './api'
+import { getTeas, createTea, deleteTea, importTeaFromUrl, updateTea, markTeaConsumed, downloadTeasYaml } from './api'
 import { TimerProvider, useTimer } from './TimerContext'
-import { Clock, Plus, X, Coffee, ExternalLink, Star, LogOut } from 'lucide-react'
+import { Clock, Plus, X, Coffee, ExternalLink, Star, LogOut, Download } from 'lucide-react'
 import { CAFFEINE_LEVELS, TEA_TYPES } from './types'
 import { Toaster } from 'sonner'
 import { showSuccess, showError, showInfo } from './utils/toast'
@@ -452,6 +452,15 @@ function AppContent() {
     });
   };
 
+  const handleDownloadYaml = async () => {
+    try {
+      await downloadTeasYaml();
+      showSuccess('Download started');
+    } catch (error) {
+      console.error('Failed to download YAML:', error);
+      showError('Failed to download teas.yaml');
+    }
+  };
 
   const uniqueTypes = useMemo(() => {
     return Array.from(new Set(teas.map(tea => tea.type))).sort();
@@ -513,6 +522,9 @@ function AppContent() {
 
         <div className="header-controls">
           <SortControls sortBy={sortBy} onSortChange={setSortBy} />
+          <button onClick={handleDownloadYaml} className="btn-secondary" title="Download YAML">
+            <Download size={18} />
+          </button>
           <button onClick={() => setShowForm(true)} className="btn-primary btn-add-tea">
             <Plus size={18} /> Add Tea
           </button>

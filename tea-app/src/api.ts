@@ -64,3 +64,14 @@ export const markTeaConsumed = async (id: string): Promise<Tea> => {
   const response = await api.put(`/teas/${id}/lastConsumed`);
   return TeaSchema.parse(response.data);
 };
+
+export const downloadTeasYaml = async (): Promise<void> => {
+  const response = await api.get('/teas/export', { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'teas.yaml');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};

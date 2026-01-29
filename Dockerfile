@@ -12,7 +12,8 @@ RUN npm ci
 COPY tea-app/ ./
 
 # Build Frontend (Vite)
-ENV VITE_API_URL=http://localhost:3001/api
+# Set API URL to relative path for same-origin requests
+ENV VITE_API_URL=/api
 RUN npm run build
 
 # Stage 2: Build Backend
@@ -41,9 +42,6 @@ RUN npm run build
 FROM node:22-bookworm-slim AS runner
 LABEL maintainer="Serena"
 
-# Install 'serve' globally to serve the frontend
-RUN npm install -g serve
-
 WORKDIR /app
 
 # Set environment variables
@@ -60,24 +58,14 @@ COPY tea-app/server/package.json tea-app/server/package-lock.json ./
 RUN npm ci --only=production
 
 # Copy compiled backend code
-# The source path is now explicit based on the build structure
 COPY --from=backend-builder /app/tea-app/server/dist/tea-app/server ./server
 COPY --from=backend-builder /app/tea-app/server/dist/tea-app/shared ./shared
 
-# Copy frontend build artifacts
-COPY --from=frontend-builder /app/frontend/dist ./frontend-dist
+# Copy frontend build artifacts to 'dist' where server expects them
+COPY --from=frontend-builder /app/frontend/dist ./dist
 
-# Create startup script to run both services
-RUN echo '#!/bin/sh' > /start.sh && \
-    echo '# Start backend in background' >> /start.sh && \
-    echo 'node server/index.js &' >> /start.sh && \
-    echo '# Start frontend in foreground' >> /start.sh && \
-    echo 'serve -s frontend-dist -l 5173' >> /start.sh && \
-    chmod +x /start.sh
-
-# Expose ports
+# Expose only the backend port
 EXPOSE 3001
-EXPOSE 5173
 
-# Start the services
-CMD ["/start.sh"]
+# Start the backend server (which also serves frontend)
+CMD ["node", "server/index.js"]

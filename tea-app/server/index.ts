@@ -37,6 +37,7 @@ logger.info(`DATA_FILE: ${DATA_FILE}`)
 
 // Configure CORS with whitelisted origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || ['http://localhost:5173'];
+logger.info(`allowedOrigins: ${allowedOrigins}`)
 
 app.use(cors({
   origin: allowedOrigins,

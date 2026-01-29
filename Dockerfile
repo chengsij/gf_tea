@@ -41,9 +41,6 @@ RUN npm run build
 FROM node:22-bookworm-slim AS runner
 LABEL maintainer="Serena"
 
-# Install Puppeteer dependencies (Chrome)
-RUN apt-get update && apt-get install -y chromium
-
 # Install 'serve' globally to serve the frontend
 RUN npm install -g serve
 
@@ -51,8 +48,6 @@ WORKDIR /app
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PORT=3001
 ENV DATA_FILE_PATH=/app/data/teas.yaml
 COPY tea-app/server/teas.yaml /app/data/teas.yaml

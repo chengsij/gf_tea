@@ -108,7 +108,7 @@ export const validateAuthConfig = (): void => {
     getAuthConfig();
     logger.info('Auth configuration validated');
   } catch (error) {
-    logger.error('Auth configuration error:', error instanceof Error ? error.message : String(error));
+    logger.error('Auth configuration error:', error);
     process.exit(1);
   }
 };

@@ -169,3 +169,41 @@
   teaWeight: 5g Tea
   timesConsumed: 1
   lastConsumedDate: 1769541035828
+- id: '1769659855270'
+  name: Superfine Tan Yang Gong Fu Black Tea
+  type: Black
+  image: >-
+    https://d27pcll2dx97vv.cloudfront.net/pub/media/catalog/product/cache/0f831c1845fc143d00d6d1ebc49f446a/s/u/superfine_tan_yang_gong_fu_black_tea_1.jpg
+  steepTimes:
+    - 5
+    - 10
+    - 10
+    - 15
+    - 20
+    - 30
+  caffeine: 'Caffeine: Less than 40% of a cup of coffee'
+  caffeineLevel: High
+  website: https://www.teavivre.com/tan-yang-gong-fu-black-tea.html
+  brewingTemperature: 185℉ / 85℃
+  teaWeight: 5g Tea
+  timesConsumed: 1
+  lastConsumedDate: 1769659863574
+- id: '1769709041399'
+  name: Award Winning Organic Superfine Dragon Well Long Jing Green Tea
+  type: Green
+  image: >-
+    https://d27pcll2dx97vv.cloudfront.net/pub/media/catalog/product/cache/0f831c1845fc143d00d6d1ebc49f446a/o/r/organic_longjing_winning_pc.jpg
+  steepTimes:
+    - 20
+    - 30
+    - 40
+    - 50
+    - 60
+  caffeine: Low caffeine (less than 10% of a cup of coffee)
+  caffeineLevel: Low
+  website: https://www.teavivre.com/organic-long-jing-green-tea.html
+  brewingTemperature: 185℉ / 85℃
+  teaWeight: 4g Tea
+  rating: 8
+  timesConsumed: 1
+  lastConsumedDate: 1769711623543

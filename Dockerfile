@@ -12,7 +12,8 @@ RUN npm ci
 COPY tea-app/ ./
 
 # Build Frontend (Vite)
-ENV VITE_API_URL=http://localhost:3001/api
+# ENV VITE_API_URL=http://localhost:3001/api
+ENV VITE_API_URL=https://gftea-production.up.railway.app/api
 RUN npm run build
 
 # Stage 2: Build Backend

@@ -59,7 +59,6 @@ COPY tea-app/server/teas.yaml /app/data/teas.yaml
 
 # Create data and log directories
 RUN mkdir -p /app/data /app/logs
-VOLUME ["/app/data", "/app/logs"]
 
 # Copy backend package files and install production dependencies
 COPY tea-app/server/package.json tea-app/server/package-lock.json ./

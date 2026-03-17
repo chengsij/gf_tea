@@ -10,6 +10,7 @@ import { showSuccess, showError, showInfo } from './utils/toast'
 import { TeaCard, FilterBar, SortControls, LoginPage } from './components'
 import { AuthProvider, useAuth } from './AuthContext'
 import { ConsumptionModal } from './ConsumptionModal'
+import { useFaviconBlink } from './useFaviconBlink'
 
 const TimerOverlay = () => {
   const { timeLeft, activeTeaName, stopTimer } = useTimer();
@@ -372,7 +373,8 @@ function AppContent() {
   const [usedSteepTimes, setUsedSteepTimes] = useState<Map<string, Set<number>>>(new Map());
   const [selectedTeaId, setSelectedTeaId] = useState<string | null>(null);
   const [deletingTeaId, setDeletingTeaId] = useState<string | null>(null);
-  const { startTimer, showConsumptionModal, activeTeaId, dismissConsumptionModal } = useTimer();
+  const { startTimer, showConsumptionModal, activeTeaId, dismissConsumptionModal, timeLeft } = useTimer();
+  useFaviconBlink(timeLeft !== null && timeLeft <= 5);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
